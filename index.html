@@ -3,137 +3,118 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D 太阳系：折叠交互版</title>
+    <title>3D 太阳系：高亮百科版</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #000; font-family: "Microsoft YaHei", "Rounded Mplus 1c", sans-serif; }
         
         #canvas-container { width: 100vw; height: 100vh; display: block; }
 
-        /* --- 面板样式 (包含动画过渡) --- */
+        /* --- 面板样式 --- */
         .info-panel {
             position: fixed; 
             bottom: 20px; 
             left: 20px; 
-            width: 380px; 
+            width: 400px; /* 稍微加宽以容纳更多文字 */
             max-width: 90vw;
-            background: rgba(20, 25, 40, 0.92); 
-            backdrop-filter: blur(15px);
+            background: rgba(15, 20, 35, 0.95); /* 背景色加深，对比度更高 */
+            backdrop-filter: blur(20px);
             border-radius: 20px; 
-            border: 1px solid rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.2);
             padding: 25px; 
-            box-shadow: 0 15px 50px rgba(0,0,0,0.8);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.9);
             color: white; 
             z-index: 100; 
-            
-            /* 高度过渡动画 */
             transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
-            max-height: 85vh; /* 展开时的最大高度 */
-            overflow: hidden; /* 防止内容溢出 */
+            max-height: 85vh; 
+            overflow: hidden; 
             display: flex;
             flex-direction: column;
         }
 
-        /* --- 折叠状态的样式 --- */
+        /* 折叠状态 */
         .info-panel.minimized {
-            max-height: 60px; /* 折叠后的高度 */
+            max-height: 60px; 
+            width: 220px;
+            background: rgba(255, 215, 0, 0.9); /* 折叠时变成醒目的金色 */
+            color: black;
             padding: 10px 20px;
-            background: rgba(20, 25, 40, 0.6); /* 折叠后稍微透明一点 */
-            width: 200px; /* 折叠后宽度变小 */
         }
 
-        /* 折叠时隐藏的内容 */
         .info-panel.minimized .nav-bar,
         .info-panel.minimized .real-photo-container,
         .info-panel.minimized .data-grid,
         .info-panel.minimized #planetDesc,
         .info-panel.minimized .speak-btn,
         .info-panel.minimized .en-name {
-            opacity: 0;
-            pointer-events: none;
-            display: none; /* 直接隐藏以不占位 */
+            display: none; 
         }
 
-        /* 折叠时标题样式的微调 */
         .info-panel.minimized h2 {
-            font-size: 1.2rem;
+            font-size: 1.1rem;
             margin: 0;
-            line-height: 40px; /* 垂直居中 */
-            white-space: nowrap;
+            line-height: 40px;
+            color: #000;
         }
 
-        /* --- 折叠/展开 切换按钮 --- */
+        /* 切换按钮 */
         .toggle-btn {
             position: absolute;
-            top: 15px;
-            right: 15px;
-            width: 32px;
-            height: 32px;
+            top: 20px;
+            right: 20px;
+            width: 30px; height: 30px;
             border-radius: 50%;
-            background: rgba(255,255,255,0.1);
-            border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.15);
+            border: none;
             color: white;
             cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.2rem;
+            display: flex; align-items: center; justify-content: center;
             transition: 0.2s;
-            z-index: 101;
+            z-index: 102;
         }
-        .toggle-btn:hover { background: rgba(255,255,255,0.25); transform: scale(1.1); }
-        
-        /* 针对不同状态改变按钮位置或图标 */
-        .info-panel.minimized .toggle-btn {
-            top: 50%;
-            transform: translateY(-50%);
-            right: 15px;
-            background: #ffd700; /* 折叠时按钮高亮 */
-            color: #000;
-            border: none;
-        }
+        .toggle-btn:hover { background: white; color: black; }
+        .info-panel.minimized .toggle-btn { color: black; border: 1px solid black; }
 
-        /* --- 内容区域样式保持不变 --- */
+        /* 内容区 */
         .nav-bar { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 15px; margin-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); flex-shrink: 0; }
-        .nav-icon { width: 40px; height: 40px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: 0.2s; flex-shrink: 0; }
-        .nav-icon:hover, .nav-icon.active { transform: scale(1.15); border-color: #ffd700; box-shadow: 0 0 15px rgba(255, 215, 0, 0.5); }
+        .nav-icon { width: 44px; height: 44px; border-radius: 50%; cursor: pointer; border: 3px solid rgba(255,255,255,0.2); transition: 0.2s; flex-shrink: 0; box-sizing: border-box; }
+        .nav-icon:hover, .nav-icon.active { transform: scale(1.1); border-color: #ffd700; box-shadow: 0 0 15px #ffd700; }
 
-        .real-photo-container { width: 100%; height: 200px; border-radius: 12px; overflow: hidden; margin-bottom: 15px; position: relative; background: #000; flex-shrink: 0; }
-        .real-photo { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s; }
-        .photo-tag { position: absolute; bottom: 8px; right: 8px; background: rgba(0,0,0,0.7); color: #fff; font-size: 0.75rem; padding: 4px 8px; border-radius: 6px; }
-
-        h2 { margin: 0 0 8px 0; color: #ffd700; font-size: 1.8rem; letter-spacing: 1px; flex-shrink: 0; transition: font-size 0.3s; }
-        .en-name { font-size: 1rem; color: #aaa; margin-left: 8px; font-weight: normal; }
-        
-        /* 滚动内容区 */
         .scroll-content { overflow-y: auto; scrollbar-width: none; padding-right: 5px; }
         .scroll-content::-webkit-scrollbar { display: none; }
 
-        p { font-size: 1rem; line-height: 1.7; color: #e0e0e0; margin: 15px 0; text-align: justify; }
+        .real-photo-container { width: 100%; height: 220px; border-radius: 12px; overflow: hidden; margin-bottom: 15px; position: relative; background: #000; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.1); }
+        .real-photo { width: 100%; height: 100%; object-fit: cover; }
+        .photo-tag { position: absolute; bottom: 8px; right: 8px; background: rgba(0,0,0,0.8); color: #fff; font-size: 0.75rem; padding: 4px 8px; border-radius: 4px; }
+
+        h2 { margin: 0 0 8px 0; color: #ffd700; font-size: 2rem; letter-spacing: 1px; flex-shrink: 0; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+        .en-name { font-size: 1rem; color: #aaa; margin-left: 10px; font-weight: normal; }
+        
+        /* 文字描述优化 */
+        p { font-size: 1.05rem; line-height: 1.8; color: #eee; margin: 15px 0; text-align: justify; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
+        
         .data-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
-        .data-item { background: rgba(255,255,255,0.08); padding: 8px 12px; border-radius: 8px; font-size: 0.85rem; color: #ddd; display: flex; flex-direction: column; }
-        .data-label { color: #888; font-size: 0.75rem; margin-bottom: 2px; }
+        .data-item { background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; font-size: 0.9rem; color: #fff; display: flex; flex-direction: column; }
+        .data-label { color: #aaa; font-size: 0.75rem; margin-bottom: 4px; }
 
-        .speak-btn { width: 100%; background: linear-gradient(135deg, #ff8c00, #ff4500); border: none; color: white; padding: 12px; border-radius: 30px; cursor: pointer; font-size: 1rem; font-weight: bold; margin-top: 10px; flex-shrink: 0; }
+        .speak-btn { width: 100%; background: linear-gradient(135deg, #ff8c00, #ff4500); border: none; color: white; padding: 14px; border-radius: 30px; cursor: pointer; font-size: 1.1rem; font-weight: bold; margin-top: 10px; flex-shrink: 0; box-shadow: 0 4px 15px rgba(255, 69, 0, 0.4); }
+        .speak-btn:active { transform: scale(0.98); }
 
-        #loading { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-size: 1.5rem; pointer-events: none; z-index: 999; }
+        #loading { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-size: 1.5rem; pointer-events: none; z-index: 999; text-shadow: 0 0 20px #000; }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 </head>
 <body>
 
-    <div id="loading">✨ 宇宙飞船启动中...</div>
+    <div id="loading">🚀 正在点亮星球...</div>
     <div id="canvas-container"></div>
 
     <div class="info-panel" id="infoPanel">
-        <!-- 折叠/展开按钮 -->
-        <button class="toggle-btn" id="toggleBtn" title="折叠/展开面板">▼</button>
+        <button class="toggle-btn" id="toggleBtn" title="折叠面板">▼</button>
 
         <div class="nav-bar" id="navBar"></div>
-        
         <h2 id="planetName">太阳系 <span class="en-name">Solar System</span></h2>
         
-        <!-- 可滚动内容包裹层 -->
         <div class="scroll-content">
             <div class="real-photo-container">
                 <img id="planetPhoto" class="real-photo" src="" alt="行星照片">
@@ -142,14 +123,202 @@
             
             <div class="data-grid" id="planetData"></div>
             
-            <p id="planetDesc">这里是浩瀚的太阳系！右上角的按钮可以把这个面板收起来哦。拖动屏幕旋转视角，点击星球，去探索它们的秘密吧！</p>
+            <p id="planetDesc">这里是浩瀚的太阳系！所有的行星都被点亮啦，快看看它们鲜艳的颜色！拖动屏幕，点击它们，听听它们的故事吧。</p>
             
             <button class="speak-btn" id="speakBtn">🔊 听听介绍</button>
         </div>
     </div>
 
     <script>
-        // --- 1. 面板折叠交互逻辑 ---
+        // --- 1. 数据配置 (文案大幅扩充 + 颜色调优) ---
+        const planetData = [
+            {
+                key: 'mercury', name: '水星', en: 'Mercury',
+                size: 1, distance: 20, speed: 0.04, 
+                baseColor: 0xCCCCCC, // 亮灰
+                texture: 'https://upload.wikimedia.org/wikipedia/commons/3/30/Mercury_mostly_true_color_MESSENGER_orthographic_projection.jpg',
+                photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d9/Mercury_in_color_-_Prockter07-edit1.jpg/600px-Mercury_in_color_-_Prockter07-edit1.jpg',
+                data: { '距离太阳': '5800万公里', '温度': '冰火两重天' },
+                desc: '我是水星，太阳系里最小、跑得最快的弟弟！因为我离太阳公公太近了，所以我不敢穿“衣服”（大气层）。这让我过着“冰火两重天”的生活：白天太阳晒着我，温度高得能烤化铅块；到了晚上，我又会瞬间冻成冰棍，温差有600多度呢！我身上布满了坑坑洼洼的陨石坑，那是以前被小石头撞击留下的伤疤，看起来是不是很像月亮？'
+            },
+            {
+                key: 'venus', name: '金星', en: 'Venus',
+                size: 1.8, distance: 28, speed: 0.015, 
+                baseColor: 0xFFA500, // 亮橙色
+                texture: 'https://upload.wikimedia.org/wikipedia/commons/1/1c/Solarsystemscope_texture_2k_venus_surface.jpg',
+                photo: 'https://upload.wikimedia.org/wikipedia/commons/e/e5/Venus-real_color.jpg',
+                data: { '距离太阳': '1.08亿公里', '特点': '超级热' },
+                desc: '我是金星，夜空中最闪亮的明星！大家都叫我“启明星”。千万别被我美丽的外表骗了，我的脾气可火爆啦！我穿着厚厚的黄色云彩大衣（二氧化碳），热量散不出去，所以我比离太阳更近的水星还要热，是真正的“火焰山”。而且我非常任性，其他行星都逆时针转，只有我是顺时针转的，所以在金星上，太阳是从西边升起的哦！'
+            },
+            {
+                key: 'earth', name: '地球', en: 'Earth',
+                size: 1.9, distance: 38, speed: 0.01, 
+                baseColor: 0x00BFFF, // 鲜亮的天蓝
+                texture: 'https://upload.wikimedia.org/wikipedia/commons/c/cf/Solarsystemscope_texture_2k_earth_daymap.jpg',
+                photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/97/The_Earth_seen_from_Apollo_17.jpg/600px-The_Earth_seen_from_Apollo_17.jpg',
+                data: { '距离太阳': '1.5亿公里', '成分': '70%是水' },
+                desc: '我是地球，是你们最珍贵的家园。从太空看，我像一颗蓝白相间的玻璃弹珠，那是因为我表面70%都是蓝色的海洋，还有白色的云朵在飘动。我是太阳系里唯一知道有生命存在的地方，有花草树木，还有可爱的小动物。我还有一个好保镖叫“月球”，它一直陪着我转圈圈，帮我阻挡陨石，还能引起海水的涨潮和退潮呢。'
+            },
+            {
+                key: 'mars', name: '火星', en: 'Mars',
+                size: 1.2, distance: 50, speed: 0.008, 
+                baseColor: 0xFF4500, // 鲜红
+                texture: 'https://upload.wikimedia.org/wikipedia/commons/7/70/Solarsystemscope_texture_2k_mars.jpg',
+                photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/02/OSIRIS_Mars_true_color.jpg/600px-OSIRIS_Mars_true_color.jpg',
+                data: { '距离太阳': '2.28亿公里', '颜色': '铁锈红' },
+                desc: '我是火星，大家都叫我“红色星球”。为什么是红色的呢？因为我全身的土壤里都生锈啦（氧化铁）！虽然我现在是个寒冷的沙漠，但我有两样很厉害的东西：一是全太阳系最大的峡谷，叫“水手号峡谷”；二是全太阳系最高的火山，叫“奥林帕斯山”，比三个珠穆朗玛峰叠起来还要高！现在有好几辆人类派来的小火星车正在我身上到处探险呢。'
+            },
+            {
+                key: 'jupiter', name: '木星', en: 'Jupiter',
+                size: 5.5, distance: 75, speed: 0.004, 
+                baseColor: 0xF0E68C, // 亮卡其色
+                texture: 'https://upload.wikimedia.org/wikipedia/commons/e/e4/Jupiter_Hubble_2019_Select.jpg',
+                photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2b/Jupiter_and_its_shrunken_Great_Red_Spot.jpg/600px-Jupiter_and_its_shrunken_Great_Red_Spot.jpg',
+                data: { '距离太阳': '7.78亿公里', '大小': '体积最大' },
+                desc: '我是木星，行星里的“巨人大哥”！我的肚子大到能装下1300个地球。我其实是一个巨大的气体球，如果你踩在我身上，会直接掉进去的。看到我肚子上那个大大的红眼睛了吗？那叫“大红斑”，是一个刮了几百年的超级大风暴，风力比地球上的台风大得多。我还是太阳系的“吸尘器”，用强大的引力把很多危险的陨石吸过来，保护了地球弟弟的安全。'
+            },
+            {
+                key: 'saturn', name: '土星', en: 'Saturn',
+                size: 4.5, distance: 100, speed: 0.003, 
+                baseColor: 0xFFD700, // 金色
+                hasRing: true,
+                texture: 'https://upload.wikimedia.org/wikipedia/commons/0/03/Solarsystemscope_texture_2k_saturn.jpg',
+                photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c7/Saturn_during_Equinox.jpg/640px-Saturn_during_Equinox.jpg',
+                data: { '距离太阳': '14亿公里', '特征': '最美光环' },
+                desc: '我是土星，我是宇宙中最优雅的舞者。我也有一件气体做的衣服，但我最自豪的是腰间那个宽宽大大的光环！虽然远远看着像一个盘子，其实它是由无数的冰块和岩石碎片组成的，它们都在围着我跳舞。虽然我个头很大，但我非常“虚胖”，密度很小。如果宇宙中有一个足够大的澡盆，把我放进去，我甚至能浮在水面上洗澡呢！'
+            },
+            {
+                key: 'uranus', name: '天王星', en: 'Uranus',
+                size: 3.0, distance: 125, speed: 0.002, 
+                baseColor: 0x00FFFF, // 青色
+                texture: 'https://upload.wikimedia.org/wikipedia/commons/9/95/Solarsystemscope_texture_2k_uranus.jpg',
+                photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3d/Uranus2.jpg/600px-Uranus2.jpg',
+                data: { '距离太阳': '29亿公里', '气味': '臭鸡蛋味' },
+                desc: '我是天王星，一颗漂亮的蓝绿色冰球。我和别的星星都不一样，我是“躺着”转圈的，就像在轨道上打滚一样！这也让我经历了非常漫长的冬天和夏天，一个季节要持续21年。科学家发现我的大气层里有一些特殊的成分，所以如果你能闻到我的味道，可能会觉得像臭鸡蛋一样难闻哦！这里非常寒冷，被大家称为“冰巨星”。'
+            },
+            {
+                key: 'neptune', name: '海王星', en: 'Neptune',
+                size: 2.9, distance: 150, speed: 0.001, 
+                baseColor: 0x4169E1, // 皇家蓝
+                texture: 'https://upload.wikimedia.org/wikipedia/commons/1/1e/Solarsystemscope_texture_2k_neptune.jpg',
+                photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/63/Neptune_-_Voyager_2_%2829347980845%29_flatten_crop.jpg/600px-Neptune_-_Voyager_2_%2829347980845%29_flatten_crop.jpg',
+                data: { '距离太阳': '45亿公里', '特征': '大风暴' },
+                desc: '我是海王星，离太阳最远，所以我是神秘的深蓝色。我这里非常暗，是肉眼看不到的，科学家是先用数学算出了我的位置，才找到我的，所以我叫“笔尖下的行星”。我脾气很暴躁，有着太阳系里最快的风，风速快到能把大树连根拔起！因为路途太遥远，我绕太阳跑一圈，地球上就要过去165年，也就是好几代人的时间呢。'
+            }
+        ];
+
+        // --- 2. Three.js 场景初始化 ---
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 90, 150); 
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.maxDistance = 400;
+
+        // --- 3. 视觉强化：强光照设置 ---
+        // 环境光：大幅增强，确保背光面也有颜色
+        const ambientLight = new THREE.AmbientLight(0xffffff, 1.2); 
+        scene.add(ambientLight);
+
+        // 点光源（太阳）：增强强度
+        const pointLight = new THREE.PointLight(0xffffff, 2.0, 600);
+        scene.add(pointLight);
+
+        // 星空背景
+        const starGeo = new THREE.BufferGeometry();
+        const starCount = 8000;
+        const starPos = new Float32Array(starCount * 3);
+        for(let i=0; i<starCount*3; i++) starPos[i] = (Math.random() - 0.5) * 1000;
+        starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+        const starMat = new THREE.PointsMaterial({color: 0xffffff, size: 0.8, transparent: true, opacity: 0.8});
+        scene.add(new THREE.Points(starGeo, starMat));
+
+        const loader = new THREE.TextureLoader();
+        const planetMeshes = [];
+
+        // 太阳
+        const sunMat = new THREE.MeshBasicMaterial({ 
+            map: loader.load('https://upload.wikimedia.org/wikipedia/commons/9/99/Map_of_the_full_sun.jpg'), 
+            color: 0xffeebb 
+        });
+        const sun = new THREE.Mesh(new THREE.SphereGeometry(12, 64, 64), sunMat);
+        scene.add(sun);
+        // 太阳光晕
+        const sunGlow = new THREE.Mesh(
+            new THREE.SphereGeometry(14, 64, 64), 
+            new THREE.MeshBasicMaterial({ color: 0xffaa00, transparent: true, opacity: 0.4, side: THREE.BackSide })
+        );
+        scene.add(sunGlow);
+
+        // --- 4. 创建行星 (视觉核心调整) ---
+        planetData.forEach(p => {
+            // 轨道线：加粗、加亮
+            const orbitGeo = new THREE.RingGeometry(p.distance - 0.4, p.distance + 0.4, 128);
+            const orbitMat = new THREE.MeshBasicMaterial({ 
+                color: p.baseColor, 
+                opacity: 0.5, // 提高不透明度
+                transparent: true, 
+                side: THREE.DoubleSide 
+            });
+            const orbit = new THREE.Mesh(orbitGeo, orbitMat);
+            orbit.rotation.x = -Math.PI / 2;
+            scene.add(orbit);
+
+            // 行星材质：使用 MeshStandardMaterial + Emissive (自发光)
+            // 这样即使在黑暗中，行星也会发出自身的颜色光
+            const geometry = new THREE.SphereGeometry(p.size, 64, 64);
+            const material = new THREE.MeshStandardMaterial({
+                map: loader.load(p.texture),
+                color: 0xffffff, // 基础色
+                roughness: 0.5,
+                metalness: 0.1,
+                emissive: p.baseColor, // 核心：设置自发光颜色
+                emissiveIntensity: 0.45 // 核心：强度适中，既能看清又不失立体感
+            });
+            
+            const mesh = new THREE.Mesh(geometry, material);
+            const startAngle = Math.random() * Math.PI * 2;
+            mesh.position.set(Math.cos(startAngle) * p.distance, 0, Math.sin(startAngle) * p.distance);
+            scene.add(mesh);
+
+            if (p.hasRing) {
+                const ringMat = new THREE.MeshBasicMaterial({ 
+                    map: loader.load('https://upload.wikimedia.org/wikipedia/commons/thumb/b/b1/Saturn_ring_texture.jpg/220px-Saturn_ring_texture.jpg'),
+                    color: 0xeeeeee, 
+                    side: THREE.DoubleSide, 
+                    transparent: true, 
+                    opacity: 0.9 
+                });
+                const ring = new THREE.Mesh(new THREE.RingGeometry(p.size * 1.4, p.size * 2.3, 64), ringMat);
+                ring.rotation.x = -Math.PI / 2;
+                mesh.add(ring);
+            }
+
+            planetMeshes.push({ mesh: mesh, data: p, angle: startAngle, distance: p.distance, speed: p.speed });
+        });
+
+        document.getElementById('loading').style.display = 'none';
+
+        function animate() {
+            requestAnimationFrame(animate);
+            sun.rotation.y += 0.003;
+            planetMeshes.forEach(obj => {
+                obj.angle += obj.speed * 0.15; // 速度微调
+                obj.mesh.position.x = Math.cos(obj.angle) * obj.distance;
+                obj.mesh.position.z = Math.sin(obj.angle) * obj.distance;
+                obj.mesh.rotation.y += 0.015;
+            });
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // --- 5. UI 交互逻辑 ---
         const panel = document.getElementById('infoPanel');
         const toggleBtn = document.getElementById('toggleBtn');
         let isMinimized = false;
@@ -158,154 +327,13 @@
             isMinimized = !isMinimized;
             if (isMinimized) {
                 panel.classList.add('minimized');
-                toggleBtn.innerHTML = '▲'; // 变成向上箭头，提示可以展开
+                toggleBtn.innerHTML = '▲';
             } else {
                 panel.classList.remove('minimized');
-                toggleBtn.innerHTML = '▼'; // 变成向下箭头，提示可以折叠
+                toggleBtn.innerHTML = '▼';
             }
         };
 
-        // --- 2. 3D与数据部分 (保持不变) ---
-        const planetData = [
-            {
-                key: 'mercury', name: '水星', en: 'Mercury',
-                size: 1, distance: 20, speed: 0.04, baseColor: 0xA5A5A5,
-                texture: 'https://upload.wikimedia.org/wikipedia/commons/3/30/Mercury_mostly_true_color_MESSENGER_orthographic_projection.jpg',
-                photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d9/Mercury_in_color_-_Prockter07-edit1.jpg/600px-Mercury_in_color_-_Prockter07-edit1.jpg',
-                data: { '距离太阳': '5800万公里', '温度': '冰火两重天' },
-                desc: '我是水星，太阳系里跑得最快的“小飞毛腿”！因为离太阳公公最近，所以我身上没有空气，也没有水。白天我热得像火炉，晚上又冷得像冰窖。我身上有很多坑坑洼洼，长得特别像你们晚上见到的月亮。'
-            },
-            {
-                key: 'venus', name: '金星', en: 'Venus',
-                size: 1.8, distance: 28, speed: 0.015, baseColor: 0xE3BB76,
-                texture: 'https://upload.wikimedia.org/wikipedia/commons/1/1c/Solarsystemscope_texture_2k_venus_surface.jpg',
-                photo: 'https://upload.wikimedia.org/wikipedia/commons/e/e5/Venus-real_color.jpg',
-                data: { '距离太阳': '1.08亿公里', '特点': '最亮的星' },
-                desc: '我是金星，是夜空中最亮的明星，也叫“启明星”。虽然水星离太阳更近，但我穿着厚厚的黄色云彩大衣，热气散不出去，所以我才是太阳系里最热的“火焰山”！而且，我是倒着转圈的，在金星上，太阳是从西边出来的哦。'
-            },
-            {
-                key: 'earth', name: '地球', en: 'Earth',
-                size: 1.9, distance: 38, speed: 0.01, baseColor: 0x22A6B3,
-                texture: 'https://upload.wikimedia.org/wikipedia/commons/c/cf/Solarsystemscope_texture_2k_earth_daymap.jpg',
-                photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/97/The_Earth_seen_from_Apollo_17.jpg/600px-The_Earth_seen_from_Apollo_17.jpg',
-                data: { '距离太阳': '1.5亿公里', '家园': '唯一的生命' },
-                desc: '我是地球，是你们唯一的家园，一颗蓝色的宝石。我有辽阔的海洋、绿色的森林和白色的云朵。我是太阳系里唯一有花草树木和小动物居住的地方。我有个月亮好朋友，一直陪着我跳舞，小朋友们一定要好好爱护我呀！'
-            },
-            {
-                key: 'mars', name: '火星', en: 'Mars',
-                size: 1.2, distance: 50, speed: 0.008, baseColor: 0xDD4C22,
-                texture: 'https://upload.wikimedia.org/wikipedia/commons/7/70/Solarsystemscope_texture_2k_mars.jpg',
-                photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/02/OSIRIS_Mars_true_color.jpg/600px-OSIRIS_Mars_true_color.jpg',
-                data: { '距离太阳': '2.28亿公里', '颜色': '红色' },
-                desc: '我是火星，大家都叫我“红色星球”，因为我全身铺满了红色的铁锈沙尘。我有全太阳系最高的火山——奥林帕斯山，比珠穆朗玛峰高三倍呢！现在有好多人类派出的小车车（火星车）在我身上探险，寻找水的踪迹。'
-            },
-            {
-                key: 'jupiter', name: '木星', en: 'Jupiter',
-                size: 5.5, distance: 75, speed: 0.004, baseColor: 0xD8CA9D,
-                texture: 'https://upload.wikimedia.org/wikipedia/commons/e/e4/Jupiter_Hubble_2019_Select.jpg',
-                photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2b/Jupiter_and_its_shrunken_Great_Red_Spot.jpg/600px-Jupiter_and_its_shrunken_Great_Red_Spot.jpg',
-                data: { '距离太阳': '7.78亿公里', '大小': '最大' },
-                desc: '我是木星，是太阳系里的“巨人大哥”！我的肚子大到能装下1300个地球。我是一颗气体巨星，踩上去会掉进去的。看到我肚子上的大红斑了吗？那是一个刮了几百年的超级大风暴。我还像吸尘器一样，帮地球挡住了好多撞过来的陨石呢。'
-            },
-            {
-                key: 'saturn', name: '土星', en: 'Saturn',
-                size: 4.5, distance: 100, speed: 0.003, baseColor: 0xF4D03F, hasRing: true,
-                texture: 'https://upload.wikimedia.org/wikipedia/commons/0/03/Solarsystemscope_texture_2k_saturn.jpg',
-                photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c7/Saturn_during_Equinox.jpg/640px-Saturn_during_Equinox.jpg',
-                data: { '距离太阳': '14亿公里', '特征': '美丽光环' },
-                desc: '我是土星，我是宇宙中最优雅的舞者。我也有一件气体做的衣服，但我最自豪的是腰间那个宽宽大大的光环，那是无数冰块和岩石组成的。虽然我很大，但我很轻，如果有一个超级大的浴缸，我甚至能浮在水面上洗澡呢！'
-            },
-            {
-                key: 'uranus', name: '天王星', en: 'Uranus',
-                size: 3.0, distance: 125, speed: 0.002, baseColor: 0x73C6B6,
-                texture: 'https://upload.wikimedia.org/wikipedia/commons/9/95/Solarsystemscope_texture_2k_uranus.jpg',
-                photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3d/Uranus2.jpg/600px-Uranus2.jpg',
-                data: { '距离太阳': '29亿公里', '特点': '躺着转' },
-                desc: '我是天王星，一颗漂亮的蓝绿色冰球。我和别的星星都不一样，我是“躺着”转圈的，就像在轨道上打滚一样！这也让我经历了非常漫长的冬天和夏天。我离太阳很远，这里非常非常冷，被称为“冰巨星”。'
-            },
-            {
-                key: 'neptune', name: '海王星', en: 'Neptune',
-                size: 2.9, distance: 150, speed: 0.001, baseColor: 0x5B5DDF,
-                texture: 'https://upload.wikimedia.org/wikipedia/commons/1/1e/Solarsystemscope_texture_2k_neptune.jpg',
-                photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/63/Neptune_-_Voyager_2_%2829347980845%29_flatten_crop.jpg/600px-Neptune_-_Voyager_2_%2829347980845%29_flatten_crop.jpg',
-                data: { '距离太阳': '45亿公里', '特点': '风速最快' },
-                desc: '我是海王星，离太阳最远，所以我是神秘的深蓝色。我这里非常暗，也非常冷。但我也是个暴脾气，我有太阳系里最快的风，风速快到能把大树连根拔起！因为路途太远，我绕太阳跑一圈，需要165年呢。'
-            }
-        ];
-
-        // Three.js Setup
-        const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 80, 140); 
-
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        document.getElementById('canvas-container').appendChild(renderer.domElement);
-
-        const controls = new THREE.OrbitControls(camera, renderer.domElement);
-        controls.enableDamping = true;
-        controls.maxDistance = 350;
-
-        const ambientLight = new THREE.AmbientLight(0xaaaaaa, 0.8); scene.add(ambientLight);
-        const pointLight = new THREE.PointLight(0xffffff, 1.2, 400); scene.add(pointLight);
-
-        // Stars
-        const starGeo = new THREE.BufferGeometry();
-        const starCount = 6000;
-        const starPos = new Float32Array(starCount * 3);
-        for(let i=0; i<starCount*3; i++) starPos[i] = (Math.random() - 0.5) * 800;
-        starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
-        scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({color: 0xffffff, size: 0.7})));
-
-        const loader = new THREE.TextureLoader();
-        const planetMeshes = [];
-
-        // Sun
-        const sunMat = new THREE.MeshBasicMaterial({ map: loader.load('https://upload.wikimedia.org/wikipedia/commons/9/99/Map_of_the_full_sun.jpg'), color: 0xffdd00 });
-        const sun = new THREE.Mesh(new THREE.SphereGeometry(10, 32, 32), sunMat);
-        scene.add(sun);
-        scene.add(new THREE.Mesh(new THREE.SphereGeometry(11, 32, 32), new THREE.MeshBasicMaterial({ color: 0xffaa00, transparent: true, opacity: 0.3, side: THREE.BackSide })));
-
-        // Planets
-        planetData.forEach(p => {
-            const orbit = new THREE.Mesh(new THREE.RingGeometry(p.distance - 0.3, p.distance + 0.3, 128), new THREE.MeshBasicMaterial({ color: p.baseColor, opacity: 0.3, transparent: true, side: THREE.DoubleSide }));
-            orbit.rotation.x = -Math.PI / 2;
-            scene.add(orbit);
-
-            const material = new THREE.MeshStandardMaterial({
-                map: loader.load(p.texture), color: 0xffffff, roughness: 0.6, emissive: p.baseColor, emissiveIntensity: 0.2
-            });
-            const mesh = new THREE.Mesh(new THREE.SphereGeometry(p.size, 32, 32), material);
-            const startAngle = Math.random() * Math.PI * 2;
-            mesh.position.set(Math.cos(startAngle) * p.distance, 0, Math.sin(startAngle) * p.distance);
-            scene.add(mesh);
-
-            if (p.hasRing) {
-                const ringMat = new THREE.MeshBasicMaterial({ map: loader.load('https://upload.wikimedia.org/wikipedia/commons/thumb/b/b1/Saturn_ring_texture.jpg/220px-Saturn_ring_texture.jpg'), color: 0xdddddd, side: THREE.DoubleSide, transparent: true, opacity: 0.8 });
-                const ring = new THREE.Mesh(new THREE.RingGeometry(p.size * 1.4, p.size * 2.2, 64), ringMat);
-                ring.rotation.x = -Math.PI / 2;
-                mesh.add(ring);
-            }
-            planetMeshes.push({ mesh: mesh, data: p, angle: startAngle, distance: p.distance, speed: p.speed });
-        });
-
-        document.getElementById('loading').style.display = 'none';
-
-        function animate() {
-            requestAnimationFrame(animate);
-            sun.rotation.y += 0.004;
-            planetMeshes.forEach(obj => {
-                obj.angle += obj.speed * 0.2;
-                obj.mesh.position.x = Math.cos(obj.angle) * obj.distance;
-                obj.mesh.position.z = Math.sin(obj.angle) * obj.distance;
-                obj.mesh.rotation.y += 0.02;
-            });
-            controls.update();
-            renderer.render(scene, camera);
-        }
-        animate();
-
-        // UI & Interaction
         const navBar = document.getElementById('navBar');
         planetData.forEach(p => {
             const icon = document.createElement('div');
@@ -318,6 +346,7 @@
             navBar.appendChild(icon);
         });
 
+        // 射线检测
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
         
@@ -332,10 +361,7 @@
                 const target = intersects[0].object;
                 const found = planetMeshes.find(p => p.mesh === target || (target.parent && p.mesh === target.parent));
                 if (found) {
-                    // 如果面板是折叠的，自动展开以便用户查看信息
-                    if (isMinimized) {
-                        toggleBtn.click();
-                    }
+                    if (isMinimized) toggleBtn.click();
                     updateInfo(found.data);
                 }
             }
@@ -349,6 +375,7 @@
         let synth = window.speechSynthesis;
         let isSpeaking = false;
 
+        // 默认显示太阳图片
         photoEl.src = "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b4/The_Sun_by_the_Atmospheric_Imaging_Assembly_of_NASA%27s_Solar_Dynamics_Observatory_-_20100819.jpg/600px-The_Sun_by_the_Atmospheric_Imaging_Assembly_of_NASA%27s_Solar_Dynamics_Observatory_-_20100819.jpg";
 
         function updateInfo(data) {
